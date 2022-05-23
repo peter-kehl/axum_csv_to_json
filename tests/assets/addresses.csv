@@ -1,0 +1,5 @@
+reference,address_type,appt_suite_number,street_number,street,city,state,postcode
+Tom,appt,10,1234,Tulip,Oklahoma,OK,73008
+parents,house,,4544,Blue,Buffalo,NY,10111
+car mechanic,house,,8082,,Olympia,WA,98501
+girlfriend,suite,8,5622,Green,Seattle,WA,98101

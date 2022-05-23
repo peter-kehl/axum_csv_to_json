@@ -16,9 +16,7 @@ Tokio, Axum
 - generate JSON with https://docs.rs/tokio-serde-json/latest/tokio_serde_json
 - Tests
 -- manual with a generated OpenAPI schema and Postman
--- reproducible with a local Postgres: https://github.com/faokunega/pg-embed (but unmaintained for
-   10 months! - however, it depends on https://github.com/zonkyio/embedded-postgres-binaries, which
-   has 4 contributors and last commit 11 days ago)
+-- reproducible with a local Postgres: https://github.com/faokunega/pg-embed (but unmaintained for 10 months! - however, it depends on https://github.com/zonkyio/embedded-postgres-binaries, which has 4 contributors and last commit 11 days ago)
 -- reproducible with a Docker image that contains Postgres
 -- with https://docs.rs/axum-test-helper/0.1.0/axum_test_helper (updated 4 weeks ago, 1 contributor), or 
 -- with https://github.com/tokio-rs/axum/blob/main/examples/testing/src/main.rs (more bolierplate)
@@ -56,15 +54,4 @@ Tokio, Axum
 
 # Generate OpenAPI
 -----
-
-
------
-Re-install Postgres
-Postman Protobuf/JSON/REST request tester
-Tests with Embedded Postgres
------
-study 20min
------
-lpalmieri.com
-- #[tokio::main] async fn main() {...}
 
