@@ -1,8 +1,9 @@
 -----------------------------------
-| Researching technologies | 2:01 |
+| Task                     | Dur. |
 | ------------------------ | ---- |
+| Researching technologies | 2:01 |
 | Dev.                     | 1:40 |
 | Dev.                     | 1:33 |
-|                          |      |
-|                          |      |
+| Dev. + tests + debugging | 2:06 |
+| Total                    | 7:20 |
 -----------------------------------
