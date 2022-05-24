@@ -16,6 +16,17 @@ enum AddressType {
     suite,
 }
 
+impl ToString for AddressType {
+    fn to_string(&self) -> String {
+        // @TODO discuss, and/or #[derive(ToString)] instead
+        match self {
+            Self::appt => "appt".to_owned(),
+            Self::house => "house".to_owned(),
+            Self::suite => "suite".to_owned(),
+        }
+    }
+}
+
 impl TryFrom<&str> for AddressType {
     type Error = StatusCode;
 
@@ -30,15 +41,15 @@ impl TryFrom<&str> for AddressType {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Address {
+pub struct Address {
     reference: String,
     address_type: AddressType,
     suite_number: Option<String>,
     street_number: u32, //required; @TODO check address standards
     street: String,
     city: String,
-    state: String,
-    postcode: String, //to preserve any leading zeros (if allowed - TODO: check address standards if leadnig zeros are allowed)
+    state: String,    // @TODO consider enum
+    postcode: String, //to preserve any leading zeros (if allowed - TODO: check address standards if leadnig zeros are allowed). Consider zipcode for the US, postcode for overseas.
 }
 
 pub fn addresses_to_result_with_csv_crate(bytes: &[u8]) -> Result<String, StatusCode> {
@@ -130,7 +141,8 @@ pub fn addresses_to_result_with_csv_crate(bytes: &[u8]) -> Result<String, Status
                 reference: col_name_to_value("reference")?.to_owned(),
                 address_type: col_name_to_value("address_type")?.try_into()?,
                 suite_number: {
-                    match col_name_to_value("appt_suite_nu")?.trim() { //@TODO shortened field name - discuss
+                    match col_name_to_value("appt_suite_nu")?.trim() {
+                        //@TODO shortened field name - discuss
                         "" => None,
                         suite_number => Some(suite_number.to_owned()),
                     }
@@ -153,6 +165,48 @@ pub fn addresses_to_result_with_csv_crate(bytes: &[u8]) -> Result<String, Status
     }
 }
 
+fn field_to_column_idx_map<'a>(
+    column_names: impl Iterator<Item = &'a str>,
+) -> HashMap<&'a str, usize> {
+    let mut result = HashMap::new();
+    column_names.enumerate().for_each(|(col_idx, col_name)| {
+        result.insert(col_name, col_idx);
+    });
+    result
+}
+
+pub fn addresses_to_json(addresses: &Vec<Address>) -> String {
+    let address_jsons = addresses
+        .iter()
+        .map(|address| {
+            "{reference: ".to_owned()
+                + address.reference.as_str()
+                + ", address_type: "
+                + address.address_type.to_string().as_str()
+                + ", appt_suite_number: "
+                + address
+                    .suite_number
+                    .clone()
+                    .map_or("".to_owned(), |suite_number| suite_number.to_string())
+                    .as_str()
+                + ", street_number: "
+                + address.street_number.to_string().as_str()
+                + ", street: "
+                + address.street.as_str()
+                + ", city: "
+                + address.city.as_str()
+                + ", state: "
+                + address.state.as_str()
+                + ", postcode: "
+                + address.postcode.as_str()
+                + "}"
+        })
+        .collect::<Vec<_>>();
+
+    let address_jsons_joined = address_jsons.join(",\n");
+    "[".to_owned() + address_jsons_joined.as_str() + "]"
+}
+
 pub fn addresses_to_result_with_own_csv_parser(csv_content: String) -> Result<String, StatusCode> {
     let mut lines = csv_content.lines();
     let header = lines.next();
@@ -160,10 +214,69 @@ pub fn addresses_to_result_with_own_csv_parser(csv_content: String) -> Result<St
         return Err(StatusCode::NOT_ACCEPTABLE);
     }
     let header = header.unwrap();
-    let headings = header.split(',');
-    // /headings.
 
-    todo!()
+    let headings = header.split(',');
+    //let column_names = headings.collect::<Vec<_>>();
+    let field_to_column_idx = field_to_column_idx_map(headings);
+    if field_to_column_idx.len() != 8 {
+        //@TODO explore some macro for this
+        return Err(StatusCode::NOT_ACCEPTABLE);
+    }
+
+    let mut expected_fields = vec![
+        "reference",
+        "address_type",
+        "appt_suite_number",
+        "street_number",
+        "street",
+        "city",
+        "state",
+        "postcode",
+    ];
+    expected_fields.sort();
+    let mut actual_fields = field_to_column_idx
+        .keys()
+        .map(|&field_name| field_name)
+        .collect::<Vec<_>>();
+    actual_fields.sort();
+    if expected_fields != actual_fields {
+        return Err(StatusCode::NOT_ACCEPTABLE);
+    }
+
+    let mut addresses = vec![];
+    for line in lines {
+        let values = line.split(',').collect::<Vec<_>>();
+
+        let col_name_to_value = |col_name: &str| values[field_to_column_idx[col_name]];
+
+        let address = Address {
+            reference: col_name_to_value("reference").to_owned(),
+            address_type: col_name_to_value("address_type").try_into()?,
+            suite_number: {
+                match col_name_to_value("appt_suite_number").trim() {
+                    //@TODO shortened field name - discuss
+                    "" => None,
+                    suite_number => Some(suite_number.to_owned()),
+                }
+            },
+            street_number: col_name_to_value("street_number")
+                .parse::<u32>()
+                .or(Err(StatusCode::NOT_ACCEPTABLE))?,
+            street: col_name_to_value("street").to_owned(),
+            city: col_name_to_value("city").to_owned(),
+            state: col_name_to_value("state").to_owned(),
+            postcode: col_name_to_value("postcode").to_owned(),
+        };
+        addresses.push(address);
+    }
+
+    // serde_json was returning an error, life is too short
+    /*let json = serde_json::to_string(&addresses);
+    match json {
+        Ok(json_string) => Ok(json_string),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }*/
+    Ok(addresses_to_json(&addresses))
 }
 
 #[cfg(test)]
