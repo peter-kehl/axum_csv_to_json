@@ -9,6 +9,8 @@ Submit a request with either `curl -H "Content-Type: text/json" --data @tests/as
 - How to test?
 
 # Optional requirements
+Position-independent CSV headers. A file is accepted regardless of the order of columns, as far as their names match.
+
 Store in Postgres.
 
 # Preferred technologies
