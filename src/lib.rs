@@ -1,13 +1,13 @@
 use axum::http::StatusCode;
-use axum::{body::Bytes, extract::ContentLengthLimit};
 use csv::ReaderBuilder;
 use serde::{Deserialize, Serialize};
 // use serde_json::Result as SerdeResult;
 use std::collections::HashMap;
 
-pub const MAX_CONTENT_LENGTH: u64 = 4 * 1073741824;
-
-// @TODO discuss whether to use CamelCase and to_string() transformation
+// @TODO discuss whether to use CamelCase and to_string() transformation.
+// But if we use CSV crate, see also why CSV crate shortens "appt_suite_number"
+// to "appt_suite_nu" -
+// if that is not negotiable, we may want our own field mapping even more.
 #[allow(non_camel_case_types)]
 #[derive(Debug, Serialize, Deserialize)]
 enum AddressType {
@@ -41,11 +41,7 @@ struct Address {
     postcode: String, //to preserve any leading zeros (if allowed - TODO: check address standards if leadnig zeros are allowed)
 }
 
-pub async fn addresses_to_result(
-    body: ContentLengthLimit<Bytes, MAX_CONTENT_LENGTH>,
-) -> Result<String, StatusCode> {
-    let bytes: &[u8] = &body.0;
-    println!("Received {} bytes.", bytes.len());
+pub fn addresses_to_result_with_csv_crate(bytes: &[u8]) -> Result<String, StatusCode> {
     let mut reader_builder = ReaderBuilder::default();
     reader_builder.has_headers(false); // counterintuitive: false means "include headers"
 
@@ -53,7 +49,6 @@ pub async fn addresses_to_result(
     let mut csv_iter = reader.into_records();
 
     // We accept the CSV independent of its field order. Here we store a map of field names to their CSV field position (0-based).
-    // @TODO factor out to a separate function; write tests
     let column_names_owned;
     let mut field_to_column_idx = HashMap::<String, usize>::new();
     if let Some(header) = csv_iter.next() {
@@ -87,7 +82,7 @@ pub async fn addresses_to_result(
             let mut expected_fields = vec![
                 "reference",
                 "address_type",
-                "suite_number",
+                "appt_suite_nu", // TODO Check why CSV crate shortens the field names!
                 "street_number",
                 "street",
                 "city",
@@ -135,7 +130,7 @@ pub async fn addresses_to_result(
                 reference: col_name_to_value("reference")?.to_owned(),
                 address_type: col_name_to_value("address_type")?.try_into()?,
                 suite_number: {
-                    match col_name_to_value("suite_number")?.trim() {
+                    match col_name_to_value("appt_suite_nu")?.trim() { //@TODO shortened field name - discuss
                         "" => None,
                         suite_number => Some(suite_number.to_owned()),
                     }
@@ -157,3 +152,19 @@ pub async fn addresses_to_result(
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
+
+pub fn addresses_to_result_with_own_csv_parser(csv_content: String) -> Result<String, StatusCode> {
+    let mut lines = csv_content.lines();
+    let header = lines.next();
+    if !header.is_some() {
+        return Err(StatusCode::NOT_ACCEPTABLE);
+    }
+    let header = header.unwrap();
+    let headings = header.split(',');
+    // /headings.
+
+    todo!()
+}
+
+#[cfg(test)]
+mod test;

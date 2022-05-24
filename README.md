@@ -1,7 +1,9 @@
-# Usage
+# Usage and Scope
 Start with `cargo run`.
 
 Submit a request with either `curl -H "Content-Type: text/json" --data @tests/assets/addresses.csv 127.0.0.1:8080/addresses` or `wget --post-file=tests/assets/addresses.csv http://127.0.0.1:8080/addresses`.
+
+Only very simple CSV is accepted - no special handling of quotes, no escaping.
 
 # Requirements
 - Receive a CSV file as a POST body. Parse, return as an array of JSON objects.

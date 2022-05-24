@@ -4,15 +4,22 @@ use axum::http::StatusCode;
 use axum::{
     body::Bytes, extract::ContentLengthLimit, response::IntoResponse, routing::post, Router,
 };
-use axum_csv_to_json::{addresses_to_result, MAX_CONTENT_LENGTH};
+use axum_csv_to_json::addresses_to_result_with_csv_crate;
 use std::net::SocketAddr;
 use tokio;
 
-// We could use String instead of Bytes, but we need a byte slice for `from_reader`
-pub async fn addresses(body: ContentLengthLimit<Bytes, MAX_CONTENT_LENGTH>) -> impl IntoResponse {
-    println!("addresses(body) called");
-    let result = addresses_to_result(body).await;
-    println!("addresses(body) got a result");
+const MAX_CONTENT_LENGTH: u64 = 4 * 1073741824;
+
+pub async fn addresses_with_csv_crate(body: ContentLengthLimit<Bytes, MAX_CONTENT_LENGTH>) -> impl IntoResponse {
+    let result = addresses_to_result_with_csv_crate(&body.0);
+    match result {
+        Ok(json_string) => Ok(json_string),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+pub async fn addresses_with_own_csv_parser(body: ContentLengthLimit<Bytes, MAX_CONTENT_LENGTH>) -> impl IntoResponse {
+    let result = addresses_to_result_with_own_csv_parser(&body.0);
     match result {
         Ok(json_string) => Ok(json_string),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -21,7 +28,8 @@ pub async fn addresses(body: ContentLengthLimit<Bytes, MAX_CONTENT_LENGTH>) -> i
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new().route("/addresses", post(addresses));
+    // let app = Router::new().route("/addresses", post(addresses_with_csv_crate));
+    let app = Router::new().route("/addresses", post(addresses_with_own_csv_parser));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
     axum::Server::bind(&addr)
