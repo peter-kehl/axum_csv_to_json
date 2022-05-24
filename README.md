@@ -1,3 +1,8 @@
+# Usage
+Start with `cargo run`.
+
+Submit a request with either `curl -H "Content-Type: text/json" --data @tests/assets/addresses.csv 127.0.0.1:8080/addresses` or `wget --post-file=tests/assets/addresses.csv http://127.0.0.1:8080/addresses`.
+
 # Requirements
 - Receive a CSV file as a POST body. Parse, return as an array of JSON objects.
 - Document the API.
@@ -13,7 +18,7 @@ Tokio, Axum
 - Tokio webservice
 - optional: OpenAPI/Swagger with Tokio, so that we & potentially clients can test this with Postman
 - parse CSV with Serde-based https://docs.rs/csv/latest/csv
-- generate JSON with https://docs.rs/tokio-serde-json/latest/tokio_serde_json
+- unsure how to use https://docs.rs/tokio-serde-json/latest/tokio_serde_json, hence generating JSON with simple Serde only
 - Tests
 -- manual with a generated OpenAPI schema and Postman
 -- reproducible with a local Postgres: https://github.com/faokunega/pg-embed (but unmaintained for 10 months! - however, it depends on https://github.com/zonkyio/embedded-postgres-binaries, which has 4 contributors and last commit 11 days ago)
@@ -21,7 +26,7 @@ Tokio, Axum
 -- with https://docs.rs/axum-test-helper/0.1.0/axum_test_helper (updated 4 weeks ago, 1 contributor), or 
 -- with https://github.com/tokio-rs/axum/blob/main/examples/testing/src/main.rs (more bolierplate)
 - consider replacing Serde-based CSV parser with a custom parser later (may be worthwhile if no other dependancy needs Serde, then avoiding Serde speeds up build times, hence local dev & CI times)
-- consider generating JSON on our own later (again, more worthwhile if we don't need Serde for anything else)
+- consider a custom JSON generator later (again, more worthwhile if we don't need Serde for anything else)
 - local & CI to be reproducible
 -- `cargo-run-bin` with `Makefile.toml` to make build & CI process independent of locally installed cargo packages
 -- auto-generate OpenAPI and compare it to what is in GIT (with `git diff`), fail if different
