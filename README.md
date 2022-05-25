@@ -1,7 +1,7 @@
 # Usage and Scope
 Start with `cargo run`.
 
-Submit a request with either `curl -H "Content-Type: text/json" --data @tests/assets/addresses.csv 127.0.0.1:8080/addresses` or `wget --post-file=tests/assets/addresses.csv http://127.0.0.1:8080/addresses`.
+Submit a request with either `curl -H "Content-Type: text/json" --data-binary @tests/assets/addresses.csv 127.0.0.1:8080/addresses` or `wget --post-file=tests/assets/addresses.csv http://127.0.0.1:8080/addresses`. (Use `--data-binary` instead of `--data`, otherwise newlines are stripped - and those are a part of CSV format.)
 
 Only very simple CSV is accepted - case sensitive header, no special handling of quotes, no escaping.
 
@@ -9,7 +9,7 @@ Only very simple CSV is accepted - case sensitive header, no special handling of
 `curl -w "%{http_code}" -H "Content-Type: text/json" --data @tests/assets/addresses.csv 127.0.0.1:8080/addresses`
 
 # Requirements
-- Receive a CSV file as a POST body. Parse, return as an array of JSON objects.
+- Receive a CSV file as a POST body (but not as a multipart upload through a form). Parse, return as an array of JSON objects.
 - Document the API.
 - How to test?
 
@@ -50,7 +50,7 @@ Tokio, Axum
 --- https://github.com/jsdw/seamless (last commit 5 months ago, tested with Tokio 1.1.0 while the current is 1.18.2!),
 --- https://github.com/oxidecomputer/dropshot (last commit a few days ago, using more current Tokio 1.16; it seems heavyweight),
 --- https://github.com/jakobhellermann/axum_openapi (10 months old, one maintainer only),
---- https://github.com/juhaku/utoipa (last commit 6 days ago, 4 contributors) --> chosen
+--- https://github.com/juhaku/utoipa (last commit 6 days ago, 4 contributors) --> seems most practical from the above, but not suitable (at least no obviously so) for CSV parsing (despite its example for Axum: https://github.com/juhaku/utoipa/blob/master/examples/todo-axum/src/main.rs).
 - Write to Postgres
 -- Do we have a defined schema for each client/company/data source, shared across their uploads? If yes:
 --- 1. Schema can change over time, so each CSV column info would have to have its applicability period (two timestamps, and/or a client/company-specific version number/string). Or
