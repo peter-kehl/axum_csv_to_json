@@ -34,8 +34,8 @@ pub async fn addresses_with_own_csv_parser(
 
 #[tokio::main]
 async fn main() {
-    // let app = Router::new().route("/addresses", post(addresses_with_csv_crate));
-    let app = Router::new().route("/addresses", post(addresses_with_own_csv_parser));
+    //let app = Router::new().route("/addresses", post(addresses_with_csv_crate));
+    let app = Router::new().route("/addresses", post(addresses_with_csv_crate));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
     axum::Server::bind(&addr)

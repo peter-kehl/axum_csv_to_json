@@ -93,7 +93,7 @@ pub fn addresses_to_result_with_csv_crate(bytes: &[u8]) -> Result<String, Status
             let mut expected_fields = vec![
                 "reference",
                 "address_type",
-                "appt_suite_nu", // TODO Check why CSV crate shortens the field names!
+                "appt_suite_number", // TODO Check why CSV crate shortens the field names!
                 "street_number",
                 "street",
                 "city",
@@ -128,20 +128,23 @@ pub fn addresses_to_result_with_csv_crate(bytes: &[u8]) -> Result<String, Status
             return Err(StatusCode::NOT_ACCEPTABLE);
         } else {
             let record = result.unwrap();
+            //let recordString = record.as_slice();
 
             let col_name_to_value = |col_name: &str| match col_name_to_idx(col_name) {
                 None => Err(StatusCode::NOT_ACCEPTABLE),
-                Some(idx) => record
-                    .get(idx)
-                    .map(|value| Ok(value))
-                    .unwrap_or(Err(StatusCode::NOT_ACCEPTABLE)),
+                Some(idx) => {
+                    let value_opt = record.get(idx);
+                    value_opt
+                        .map(|value| Ok(value))
+                        .unwrap_or(Err(StatusCode::NOT_ACCEPTABLE))
+                }
             };
 
             let address = Address {
                 reference: col_name_to_value("reference")?.to_owned(),
                 address_type: col_name_to_value("address_type")?.try_into()?,
                 suite_number: {
-                    match col_name_to_value("appt_suite_nu")?.trim() {
+                    match col_name_to_value("appt_suite_number")?.trim() {
                         //@TODO shortened field name - discuss
                         "" => None,
                         suite_number => Some(suite_number.to_owned()),
