@@ -15,7 +15,6 @@ fn test_addresses_to_result_with_own_csv_parser() {
     //let result = result.unwrap();
 }
 
-#[ignore]
 // CSV crate seems to be returning only prefixes of some colum names, and even worse: it's inconsistent about it!
 #[test]
 fn test_addresses_to_result_with_csv_crate() {
