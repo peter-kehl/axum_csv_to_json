@@ -2,7 +2,10 @@ use axum::http::StatusCode;
 use csv::ReaderBuilder;
 use serde::{Deserialize, Serialize};
 // use serde_json::Result as SerdeResult;
+use logger::Logger;
 use std::collections::HashMap;
+
+pub mod logger;
 
 // @TODO discuss whether to use CamelCase and to_string() transformation.
 // But if we use CSV crate, see also why CSV crate shortens "appt_suite_number"
@@ -52,14 +55,19 @@ pub struct Address {
     postcode: String, //to preserve any leading zeros (if allowed - TODO: check address standards if leadnig zeros are allowed). Consider zipcode for the US, postcode for overseas.
 }
 
-pub fn addresses_to_result_with_csv_crate(bytes: &[u8]) -> Result<String, StatusCode> {
+pub async fn addresses_to_result_with_csv_crate(
+    logger: Logger,
+    bytes: &[u8],
+) -> Result<String, StatusCode> {
     let mut reader_builder = ReaderBuilder::default();
     reader_builder.has_headers(false); // counterintuitive: false means "include headers"
 
+    assert!(logger.info("Parsing CSV (with CSV crate).").await.is_ok());
     let reader = reader_builder.from_reader(bytes);
     let mut csv_iter = reader.into_records();
 
     // We accept the CSV independent of its field order. Here we store a map of field names to their CSV field position (0-based).
+    assert!(logger.info("Processing the CSV.").await.is_ok());
     let column_names_owned;
     let mut field_to_column_idx = HashMap::<String, usize>::new();
     if let Some(header) = csv_iter.next() {
@@ -161,6 +169,7 @@ pub fn addresses_to_result_with_csv_crate(bytes: &[u8]) -> Result<String, Status
             addresses.push(address);
         }
     }
+    assert!(logger.info("Generating JSON.").await.is_ok());
     let json = serde_json::to_string(&addresses);
     match json {
         Ok(json_string) => Ok(json_string),
@@ -210,7 +219,11 @@ pub fn addresses_to_json(addresses: &Vec<Address>) -> String {
     "[".to_owned() + address_jsons_joined.as_str() + "]"
 }
 
-pub fn addresses_to_result_with_own_csv_parser(csv_content: String) -> Result<String, StatusCode> {
+pub async fn addresses_to_result_with_own_csv_parser(
+    logger: Logger,
+    csv_content: String,
+) -> Result<String, StatusCode> {
+    assert!(logger.info("Parsing CSV (our own parser).").await.is_ok());
     let mut lines = csv_content.lines();
     let header = lines.next();
     if !header.is_some() {
@@ -246,6 +259,7 @@ pub fn addresses_to_result_with_own_csv_parser(csv_content: String) -> Result<St
         return Err(StatusCode::NOT_ACCEPTABLE);
     }
 
+    assert!(logger.info("Processing the CSV.").await.is_ok());
     let mut addresses = vec![];
     for line in lines {
         let values = line.split(',').collect::<Vec<_>>();
@@ -273,12 +287,14 @@ pub fn addresses_to_result_with_own_csv_parser(csv_content: String) -> Result<St
         addresses.push(address);
     }
 
+    // @TODO:::
     // serde_json was returning an error, life is too short
     /*let json = serde_json::to_string(&addresses);
     match json {
         Ok(json_string) => Ok(json_string),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }*/
+    assert!(logger.info("Generating JSON.").await.is_ok());
     Ok(addresses_to_json(&addresses))
 }
 
