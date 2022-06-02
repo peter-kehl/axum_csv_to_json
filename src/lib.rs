@@ -21,7 +21,7 @@ enum AddressType {
 
 impl ToString for AddressType {
     fn to_string(&self) -> String {
-        // @TODO discuss, and/or #[derive(ToString)] instead
+        // @TODO discuss
         match self {
             Self::appt => "appt".to_owned(),
             Self::house => "house".to_owned(),
@@ -52,7 +52,7 @@ pub struct Address {
     street: String,
     city: String,
     state: String,    // @TODO consider enum
-    postcode: String, //to preserve any leading zeros (if allowed - TODO: check address standards if leadnig zeros are allowed). Consider zipcode for the US, postcode for overseas.
+    postcode: String, //to preserve any leading zeros (if allowed - TODO: check address standards if leadnig zeros are allowed). Consider "zipcode" for the US, "postcode" for overseas.
 }
 
 pub async fn addresses_to_result_with_csv_crate(
@@ -73,7 +73,7 @@ pub async fn addresses_to_result_with_csv_crate(
     if let Some(header) = csv_iter.next() {
         if header.is_err() {
             // @TODO find better error statuses and include a message if needed; the same below
-            return Err(StatusCode::NOT_ACCEPTABLE);
+            return Err(StatusCode::NOT_ACCEPTABLE); // "Missing CSV header."
         } else {
             let header = header.unwrap();
             column_names_owned = (0..header.len())
@@ -101,7 +101,7 @@ pub async fn addresses_to_result_with_csv_crate(
             let mut expected_fields = vec![
                 "reference",
                 "address_type",
-                "appt_suite_number", // TODO Check why CSV crate shortens the field names!
+                "appt_suite_number",
                 "street_number",
                 "street",
                 "city",

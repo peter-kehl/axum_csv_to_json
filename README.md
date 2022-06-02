@@ -1,7 +1,9 @@
 # Usage and Scope
 Start with `cargo run`.
 
-Submit a request with either `curl -H "Content-Type: text/csv" --data-binary @tests/assets/addresses.csv 127.0.0.1:8080/addresses` or `wget --post-file=tests/assets/addresses.csv http://127.0.0.1:8080/addresses`. (Use `--data-binary` instead of `--data`, otherwise newlines are stripped - and those are a part of CSV format.)
+First, register at https://www.mezmo.com/sign-up (community tier is fine), then visit https://app.logdna.com > Settings > "API Keys" and generate an "ingestion key." Put it to an environment variable: `export API_KEY=...`.
+
+Then submit a request with either `curl -H "Content-Type: text/csv" --data-binary @tests/assets/addresses.csv 127.0.0.1:8080/addresses` or `wget --post-file=tests/assets/addresses.csv http://127.0.0.1:8080/addresses`. (Use `--data-binary` instead of `--data`, otherwise newlines are stripped - and those are a part of CSV format.)
 
 Only very simple CSV is accepted - case sensitive header, no special handling of quotes, no escaping.
 
