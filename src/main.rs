@@ -5,12 +5,12 @@ use axum::{
     body::Bytes, extract::ContentLengthLimit, response::IntoResponse, routing::post, Router,
 };
 // @TODO Why doesn't `crate` work here? As in: use crate::addresses_to_result_with_csv_crate
-use axum_csv_to_json::logger::Logger;
-use axum_csv_to_json::{
-    addresses_to_result_with_csv_crate, addresses_to_result_with_own_csv_parser,
-};
 use std::net::SocketAddr;
 use tokio;
+use tokio_logdna_rust::logger::Logger;
+use tokio_logdna_rust::{
+    addresses_to_result_with_csv_crate, addresses_to_result_with_own_csv_parser,
+};
 
 const MAX_CONTENT_LENGTH: u64 = 4 * 1073741824; // 4GB
 
@@ -37,27 +37,31 @@ pub async fn addresses_with_own_csv_parser(
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), String> {
     let logger = Logger::new();
-    assert!(logger
+    if logger
         .info("Instantiating (HTTP) Router struct.")
         .await
-        .is_ok());
+        .is_err()
+    {
+        return Err("Couldn't log: starting the ".to_owned());
+    }
 
-    // compile-time choice of implementation. By having this if/false we copile-time check both function signatures.
+    // compile-time choice of implementation. By having this if/false we compile-time check both function signatures.
     let app = if false {
         Router::new().route(
             "/addresses",
             post(|body|
-            // have to create a new Logger, since it's not Clone
+            // For now we have to create a new Logger, since it's not Clone.
+            // I've reported this at https://github.com/logdna/logdna-rust/issues/25.
             addresses_with_own_csv_parser(Logger::new(), body)),
         )
     } else {
         Router::new().route(
             "/addresses",
             post(|body|
-        // have to create a new Logger, since it's not Clone
-         addresses_with_csv_crate(Logger::new(), body)),
+                // again, we have to create a new Logger, since it's not Clone (as per a comment above).
+                addresses_with_csv_crate(Logger::new(), body)),
         )
     };
 
@@ -66,5 +70,6 @@ async fn main() {
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await
-        .unwrap();
+        .unwrap(); // TODO error handling ?
+    Ok(())
 }

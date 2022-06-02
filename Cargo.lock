@@ -105,18 +105,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "axum_csv_to_json"
-version = "0.1.0"
-dependencies = [
- "axum",
- "csv",
- "logdna-client",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "base64"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -197,9 +185,9 @@ checksum = "5827cebf4670468b8772dd191856768aedcb1b0278a04f989f7766351917b9dc"
 
 [[package]]
 name = "countme"
-version = "3.0.1"
+version = "2.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7704b5fdd17b18ae31c4c1da5a2e0305a2bf17b5249300a9ee9ed7b72114c636"
+checksum = "328b822bdcba4d4e402be8d9adb6eebf269f969f8eadef977a553ff3c4fbcb58"
 
 [[package]]
 name = "crc32fast"
@@ -534,6 +522,7 @@ dependencies = [
 [[package]]
 name = "logdna-client"
 version = "0.7.0"
+source = "git+https://github.com/logdna/logdna-rust#569c524898356443823173e8367c308640f20ba7"
 dependencies = [
  "async-buf-pool",
  "async-compression",
@@ -963,6 +952,18 @@ dependencies = [
  "pin-project-lite",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "tokio_logdna-rust"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "csv",
+ "logdna-client",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
