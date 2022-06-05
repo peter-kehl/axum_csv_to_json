@@ -1,5 +1,7 @@
 # Requirements
-- Receive a CSV file as a POST body (but not as a multipart upload through a form). Parse, return as an array of JSON objects.
+- Receive a CSV file as a POST body (but not as a multipart upload through a form).
+  - (Initially) it's OK to accept only a very simple CSV: Header field names are case sensitive, no special handling of quotes, no escaping.
+- Return as an array of JSON objects.
 - Create tests.
 
 # Optional requirements
@@ -10,7 +12,7 @@ Store in Postgres. Discuss schema designs.
 # Preferred technologies
 Tokio, Axum
 
-# Usage and Scope
+# Usage
 ## Start the server
 - Register at https://www.mezmo.com/sign-up (community tier is fine).
 - Visit https://app.logdna.com > Settings > "API Keys" and generate an "ingestion key."
@@ -24,10 +26,12 @@ Tokio, Axum
 - `curl -H "Content-Type: text/csv" --data-binary @tests/assets/addresses.csv 127.0.0.1:8080/addresses`
   - Use `--data-binary` instead of `--data`, otherwise newlines are stripped - and those are a part of CSV format.
 
-Only a very simple CSV is accepted: Hheader field names are case sensitive, no special handling of quotes, no escaping.
-
-# Debugging
+## Debug
 `curl -w "%{http_code}" -H "Content-Type: text/json" --data-binary @tests/assets/addresses.csv 127.0.0.1:8080/addresses`
+
+## Tests
+- `export API_KEY=...`.
+- `cargo test`
 
 # Roadmap
 - [x] `Tokio` webservice

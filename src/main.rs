@@ -9,7 +9,7 @@ use std::net::SocketAddr;
 use tokio;
 use tokio_logdna_rust::logger::Logger;
 use tokio_logdna_rust::{
-    addresses_to_result_with_csv_crate, addresses_to_result_with_own_csv_parser,
+    addresses_to_result_csv_crate_serde_json, addresses_to_result_own_csv_parser_own_json,
 };
 
 const MAX_CONTENT_LENGTH: u64 = 4 * 1073741824; // 4GB
@@ -18,7 +18,7 @@ pub async fn addresses_with_csv_crate(
     logger: Logger,
     body: ContentLengthLimit<Bytes, MAX_CONTENT_LENGTH>,
 ) -> impl IntoResponse {
-    let result = addresses_to_result_with_csv_crate(logger, &body.0).await;
+    let result = addresses_to_result_csv_crate_serde_json(logger, &body.0).await;
     match result {
         Ok(json_string) => Ok(json_string),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -29,7 +29,7 @@ pub async fn addresses_with_own_csv_parser(
     logger: Logger,
     body: ContentLengthLimit<String, MAX_CONTENT_LENGTH>,
 ) -> impl IntoResponse {
-    let result = addresses_to_result_with_own_csv_parser(logger, body.0).await;
+    let result = addresses_to_result_own_csv_parser_own_json(logger, body.0).await;
     match result {
         Ok(json_string) => Ok(json_string),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),

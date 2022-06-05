@@ -9,7 +9,8 @@ async fn test_addresses_to_result_with_own_csv_parser() {
 
     let file_content = file_content.unwrap();
 
-    let result = crate::addresses_to_result_with_own_csv_parser(Logger::new(), file_content).await;
+    let result =
+        crate::addresses_to_result_own_csv_parser_own_json(Logger::new(), file_content).await;
 
     assert!(result.is_ok());
     //let result = result.unwrap();
@@ -24,7 +25,7 @@ async fn test_addresses_to_result_with_csv_crate() {
     let file_content = file_content.unwrap();
     let bytes = file_content.as_bytes();
 
-    let result = crate::addresses_to_result_with_csv_crate(Logger::new(), bytes).await;
+    let result = crate::addresses_to_result_csv_crate_serde_json(Logger::new(), bytes).await;
 
     assert!(result.is_ok());
     //let result = result.unwrap();

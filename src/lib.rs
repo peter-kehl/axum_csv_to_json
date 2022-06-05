@@ -1,8 +1,11 @@
 use axum::http::StatusCode;
-use csv::ReaderBuilder;
+use axum::response::Response;
+use axum::Json;
+use csv::{ReaderBuilder, StringRecordsIntoIter};
 use serde::{Deserialize, Serialize};
 // use serde_json::Result as SerdeResult;
 use logger::Logger;
+use serde_json::json;
 use std::collections::HashMap;
 
 pub mod logger;
@@ -55,28 +58,17 @@ pub struct Address {
     postcode: String, //to preserve any leading zeros (if allowed - TODO: check address standards if leadnig zeros are allowed). Consider "zipcode" for the US, "postcode" for overseas.
 }
 
-pub async fn addresses_to_result_with_csv_crate(
-    logger: Logger,
-    bytes: &[u8],
-) -> Result<String, StatusCode> {
-    let mut reader_builder = ReaderBuilder::default();
-    reader_builder.has_headers(false); // counterintuitive: false means "include headers"
-
-    assert!(logger.info("Parsing CSV (with CSV crate).").await.is_ok());
-    let reader = reader_builder.from_reader(bytes);
-    let mut csv_iter = reader.into_records();
-
-    // We accept the CSV independent of its field order. Here we store a map of field names to their CSV field position (0-based).
-    assert!(logger.info("Processing the CSV.").await.is_ok());
-    let column_names_owned;
-    let mut field_to_column_idx = HashMap::<String, usize>::new();
+fn field_to_column_idx(
+    csv_iter: &mut StringRecordsIntoIter<&[u8]>,
+) -> Result<HashMap<String, usize>, StatusCode> {
+    let mut result_map = HashMap::<String, usize>::new();
     if let Some(header) = csv_iter.next() {
         if header.is_err() {
             // @TODO find better error statuses and include a message if needed; the same below
             return Err(StatusCode::NOT_ACCEPTABLE); // "Missing CSV header."
         } else {
             let header = header.unwrap();
-            column_names_owned = (0..header.len())
+            let column_names_owned = (0..header.len())
                 .map(|col_idx| header.get(col_idx))
                 .collect::<Vec<_>>();
 
@@ -91,10 +83,10 @@ pub async fn addresses_to_result_with_csv_crate(
                 .map(|col_name_result| col_name_result.unwrap().to_owned())
                 .enumerate()
                 .for_each(|(col_idx, col_name)| {
-                    field_to_column_idx.insert(col_name, col_idx);
+                    result_map.insert(col_name, col_idx);
                 });
             // @TODO there must be a macro to get a number (and list of) fields of a struct
-            if field_to_column_idx.len() != 8 {
+            if result_map.len() != 8 {
                 return Err(StatusCode::NOT_ACCEPTABLE);
             }
 
@@ -109,7 +101,7 @@ pub async fn addresses_to_result_with_csv_crate(
                 "postcode",
             ];
             expected_fields.sort();
-            let mut actual_fields = field_to_column_idx
+            let mut actual_fields = result_map
                 .keys()
                 .map(|field_name| field_name)
                 .collect::<Vec<_>>();
@@ -122,51 +114,70 @@ pub async fn addresses_to_result_with_csv_crate(
         // require the header
         return Err(StatusCode::NOT_ACCEPTABLE);
     }
+    Ok(result_map)
+}
 
-    let col_name_to_idx = |col_name: &str| {
-        let idx_option = field_to_column_idx.get(col_name).map(|&idx| idx);
-        idx_option
-    };
-
-    // On nightly we could use #![allow(iterator_try_collect)] and reader.records().try_collect::<Vec<_>>();
+pub async fn addresses_to_result_csv_crate_serde_json(
+    logger: Logger,
+    bytes: &[u8],
+) -> Result<String, StatusCode> {
     let mut addresses = vec![];
+    {
+        let mut csv_iter;
+        {
+            let mut reader_builder = ReaderBuilder::default();
+            reader_builder.has_headers(false); // counterintuitive: false means "include headers"
 
-    for result in csv_iter {
-        if result.is_err() {
-            return Err(StatusCode::NOT_ACCEPTABLE);
-        } else {
-            let record = result.unwrap();
-            //let recordString = record.as_slice();
+            assert!(logger.info("Parsing CSV (with CSV crate).").await.is_ok()); // @TODO return an Err on error instead of panic
+            let reader = reader_builder.from_reader(bytes);
+            // On nightly we could use #![allow(iterator_try_collect)] and reader.records().try_collect::<Vec<_>>();
+            csv_iter = reader.into_records();
+        }
+        assert!(logger.info("Processing the CSV.").await.is_ok());
+        // We accept the CSV independent of its field order. Here we store a map of field names to their CSV field position (0-based).
+        let field_to_column_idx = field_to_column_idx(&mut csv_iter)?;
 
-            let col_name_to_value = |col_name: &str| match col_name_to_idx(col_name) {
-                None => Err(StatusCode::NOT_ACCEPTABLE),
-                Some(idx) => {
-                    let value_opt = record.get(idx);
-                    value_opt
-                        .map(|value| Ok(value))
-                        .unwrap_or(Err(StatusCode::NOT_ACCEPTABLE))
-                }
-            };
+        let col_name_to_idx = |col_name: &str| {
+            let idx_option = field_to_column_idx.get(col_name).map(|&idx| idx);
+            idx_option
+        };
 
-            let address = Address {
-                reference: col_name_to_value("reference")?.to_owned(),
-                address_type: col_name_to_value("address_type")?.try_into()?,
-                suite_number: {
-                    match col_name_to_value("appt_suite_number")?.trim() {
-                        //@TODO shortened field name - discuss
-                        "" => None,
-                        suite_number => Some(suite_number.to_owned()),
+        for csv_record_result in csv_iter {
+            if csv_record_result.is_err() {
+                return Err(StatusCode::NOT_ACCEPTABLE);
+            } else {
+                let record = csv_record_result.unwrap();
+
+                let col_name_to_value = |col_name: &str| match col_name_to_idx(col_name) {
+                    None => Err(StatusCode::NOT_ACCEPTABLE),
+                    Some(idx) => {
+                        let value_opt = record.get(idx);
+                        value_opt
+                            .map(|value| Ok(value))
+                            .unwrap_or(Err(StatusCode::NOT_ACCEPTABLE))
                     }
-                },
-                street_number: col_name_to_value("street_number")?
-                    .parse::<u32>()
-                    .or(Err(StatusCode::NOT_ACCEPTABLE))?,
-                street: col_name_to_value("street")?.to_owned(),
-                city: col_name_to_value("city")?.to_owned(),
-                state: col_name_to_value("state")?.to_owned(),
-                postcode: col_name_to_value("postcode")?.to_owned(),
-            };
-            addresses.push(address);
+                };
+
+                let address = Address {
+                    reference: col_name_to_value("reference")?.to_owned(),
+                    address_type: col_name_to_value("address_type")?.try_into()?,
+                    suite_number: {
+                        match col_name_to_value("appt_suite_number")?.trim() {
+                            //@TODO shortened field name - discuss
+                            "" => None,
+                            suite_number => Some(suite_number.to_owned()),
+                        }
+                    },
+                    street_number: col_name_to_value("street_number")?
+                        .parse::<u32>()
+                        .or(Err(StatusCode::NOT_ACCEPTABLE))?,
+                    street: col_name_to_value("street")?.to_owned(),
+                    city: col_name_to_value("city")?.to_owned(),
+                    state: col_name_to_value("state")?.to_owned(),
+                    postcode: col_name_to_value("postcode")?.to_owned(),
+                };
+                addresses.push(address);
+            }
         }
     }
     assert!(logger.info("Generating JSON.").await.is_ok());
@@ -219,7 +230,7 @@ pub fn addresses_to_json(addresses: &Vec<Address>) -> String {
     "[".to_owned() + address_jsons_joined.as_str() + "]"
 }
 
-pub async fn addresses_to_result_with_own_csv_parser(
+pub async fn addresses_to_result_own_csv_parser_own_json(
     logger: Logger,
     csv_content: String,
 ) -> Result<String, StatusCode> {
